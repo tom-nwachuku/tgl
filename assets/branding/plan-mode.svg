@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 620" font-family="system-ui, -apple-system, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#ff3b30"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="620" fill="#0b0e13"/>
+  <text x="60" y="80" fill="#ffffff" font-size="34" font-weight="700" letter-spacing="4">PLAN MODE</text>
+  <text x="60" y="112" fill="#ff3b30" font-size="16" letter-spacing="6">THE WAR ROOM</text>
+
+  <g>
+    <rect x="30" y="180" width="240" height="220" rx="10" fill="#12161d" stroke="#2a3140" stroke-width="2"/>
+    <text x="150" y="225" fill="#ff3b30" font-size="15" font-weight="700" text-anchor="middle" letter-spacing="2">1. RECON</text>
+    <text x="150" y="260" fill="#c7cdd6" font-size="14" text-anchor="middle">Grill the human.</text>
+    <text x="150" y="284" fill="#c7cdd6" font-size="14" text-anchor="middle">One question at a time.</text>
+    <text x="150" y="308" fill="#9aa4b2" font-size="13" text-anchor="middle">Read memory and ledger</text>
+    <text x="150" y="330" fill="#9aa4b2" font-size="13" text-anchor="middle">before asking anything.</text>
+  </g>
+
+  <line x1="276" y1="290" x2="324" y2="290" stroke="#ff3b30" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <g>
+    <rect x="330" y="180" width="240" height="220" rx="10" fill="#12161d" stroke="#2a3140" stroke-width="2"/>
+    <text x="450" y="225" fill="#ff3b30" font-size="15" font-weight="700" text-anchor="middle" letter-spacing="2">2. SPEC.md</text>
+    <text x="450" y="260" fill="#c7cdd6" font-size="14" text-anchor="middle">What and why.</text>
+    <text x="450" y="284" fill="#c7cdd6" font-size="14" text-anchor="middle">No code.</text>
+    <text x="450" y="308" fill="#9aa4b2" font-size="13" text-anchor="middle">Tight enough that a stranger</text>
+    <text x="450" y="330" fill="#9aa4b2" font-size="13" text-anchor="middle">could build from it.</text>
+  </g>
+
+  <line x1="576" y1="290" x2="624" y2="290" stroke="#ff3b30" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <g>
+    <rect x="630" y="180" width="240" height="220" rx="10" fill="#12161d" stroke="#2a3140" stroke-width="2"/>
+    <text x="750" y="225" fill="#ff3b30" font-size="15" font-weight="700" text-anchor="middle" letter-spacing="2">3. PLAN.md</text>
+    <text x="750" y="260" fill="#c7cdd6" font-size="14" text-anchor="middle">Numbered slices.</text>
+    <text x="750" y="284" fill="#c7cdd6" font-size="14" text-anchor="middle">Exact files, tests, output.</text>
+    <text x="750" y="308" fill="#9aa4b2" font-size="13" text-anchor="middle">Review Focus per slice:</text>
+    <text x="750" y="330" fill="#9aa4b2" font-size="13" text-anchor="middle">how a real user breaks it.</text>
+  </g>
+
+  <line x1="876" y1="290" x2="924" y2="290" stroke="#ff3b30" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <g>
+    <rect x="930" y="180" width="240" height="220" rx="10" fill="#1a1214" stroke="#ff3b30" stroke-width="2"/>
+    <text x="1050" y="225" fill="#ff3b30" font-size="15" font-weight="700" text-anchor="middle" letter-spacing="2">4. SIGN-OFF</text>
+    <text x="1050" y="260" fill="#c7cdd6" font-size="14" text-anchor="middle">Human approves</text>
+    <text x="1050" y="284" fill="#c7cdd6" font-size="14" text-anchor="middle">the plan.</text>
+    <text x="1050" y="308" fill="#9aa4b2" font-size="13" text-anchor="middle">This is the gate.</text>
+    <text x="1050" y="330" fill="#9aa4b2" font-size="13" text-anchor="middle">No signature, no assault.</text>
+  </g>
+
+  <text x="60" y="480" fill="#9aa4b2" font-size="16">No code in the war room.</text>
+  <text x="60" y="512" fill="#5b6472" font-size="14" font-style="italic">Plan Mode measures twice.</text>
+</svg>
