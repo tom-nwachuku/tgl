@@ -11,6 +11,7 @@ beyond the session store, no code execution.
 
 import uvicorn
 from mcp.server.mcpserver import MCPServer
+from mcp.server.transport_security import TransportSecuritySettings
 from starlette.responses import PlainTextResponse, Response
 from starlette.routing import Route
 
@@ -64,9 +65,18 @@ def tgl_plan_plan(session_id: str, plan_markdown: str) -> dict:
 
 def create_app():
     """Build the Starlette app: MCP over streamable HTTP at /mcp, static
-    pages at /, /privacy, /terms, plus GET routes serving validated
-    SPEC.md / PLAN.md docs so the URLs the tools return actually resolve."""
-    app = server.streamable_http_app()
+    The SDK auto-enables DNS rebinding protection with a localhost-only
+    allowlist when bound to 127.0.0.1, which would 421 every production
+    request arriving with a public Host header behind the Fly proxy.
+    This is a public, no-auth server (nothing to rebind against), so the
+    protection is explicitly disabled, matching the SDK's default posture
+    for non-localhost servers.
+    """
+    app = server.streamable_http_app(
+        transport_security=TransportSecuritySettings(
+            enable_dns_rebinding_protection=False
+        )
+    )
     app.routes.append(Route("/", pages.index, methods=["GET"]))
     app.routes.append(Route("/privacy", pages.privacy, methods=["GET"]))
     app.routes.append(Route("/terms", pages.terms, methods=["GET"]))
