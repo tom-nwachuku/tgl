@@ -4,6 +4,7 @@ primary_region = "dfw"
 
 [env]
   PORT = "8000"
+  TGL_PUBLIC_BASE_URL = "https://tgl-summitx.fly.dev"
 
 [[services]]
   internal_port = 8000
@@ -26,6 +27,8 @@ primary_region = "dfw"
     method = "get"
     path = "/"
     protocol = "http"
+    [services.http_checks.headers]
+      Host = "tgl-summitx.fly.dev"
 
 [[vm]]
   cpu_kind = "shared"

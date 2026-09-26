@@ -3,3 +3,5 @@ __pycache__/
 *.pyo
 tests/
 .pytest_cache/
+
+previous-*.json

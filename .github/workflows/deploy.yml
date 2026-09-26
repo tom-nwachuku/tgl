@@ -6,6 +6,10 @@ on:
     paths:
       - 'connector/**'
       - '.github/workflows/deploy.yml'
+      - 'SKILL.md'
+      - 'install/**'
+      - 'docs/**'
+      - 'templates/**'
   workflow_dispatch:
 
 jobs:
@@ -15,10 +19,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify exact source
+        run: |
+          python -m pip install -r connector/requirements.txt pytest
+          python scripts/sync_bundle.py --check
+          python -m pytest -q
+
       - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Capture previous release
+        working-directory: connector
+        run: |
+          flyctl status --json > previous-status.json
+          flyctl releases --json > previous-releases.json
+          flyctl ips list --json > previous-ips.json
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rollback-record
+          path: connector/previous-*.json
 
       - name: Deploy
         working-directory: connector
-        run: flyctl deploy --remote-only
+        run: flyctl deploy --remote-only --ha=false
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

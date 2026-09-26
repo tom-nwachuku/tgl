@@ -11,6 +11,14 @@ import os
 import shutil
 import sys
 
+# Explicit product files only. Never copy a checkout, server, or local secrets.
+SKILL_FILES = (
+    "SKILL.md", "README.md", "LICENSE", "install/tgl-install.py",
+    "docs/modes.md", "docs/tutorial.md",
+    "templates/SPEC-template.md", "templates/PLAN-template.md",
+    "templates/LEDGER-template.md", "templates/release-checklist.md",
+)
+
 # ---------------------------------------------------------------------------
 # Style. Plain ANSI only, so this works over the most boring SSH terminal.
 # ---------------------------------------------------------------------------
@@ -182,8 +190,8 @@ def check(label, ok, detail=""):
 def step_env(c, args, ctx):
     print(c.bold("Step 1: environment check"))
     print("Making sure this machine can hold the skill. (h for help)")
-    if prompt(c, "Choice", help_key="env", default="") is None:
-        pass
+    if not args.yes:
+        prompt(c, "Choice", help_key="env", default="")
     results = []
     ok, line = check("Python version", sys.version_info >= (3, 8),
                      "%d.%d.%d" % sys.version_info[:3])
@@ -211,8 +219,8 @@ def step_target(c, args, ctx):
     print(c.bold("Step 2: install location"))
     print("Where your Muse agent reads skills from. (h for help)")
     default = os.path.expanduser("~/workspace/skills/tgl")
-    if args.target:
-        ctx["target"] = os.path.abspath(os.path.expanduser(args.target))
+    if args.target or args.yes:
+        ctx["target"] = os.path.abspath(os.path.expanduser(args.target or default))
         print("Using --target: %s" % ctx["target"])
         return True
     target = prompt(c, "Install to", help_key="target", default=default)
@@ -235,10 +243,13 @@ def step_install(c, args, ctx):
     print()
     print(c.bold("Step 3: install"))
     print("Copying the harness into place. (h for help)")
-    prompt(c, "Ready", help_key="install", default="")
+    if not args.yes:
+        prompt(c, "Ready", help_key="install", default="")
     src = find_source(c, ctx)
     if src is None:
         print(c.red("Could not find the skill source next to this installer."))
+        if args.yes:
+            return False
         manual = prompt(c, "Path to the folder containing SKILL.md")
         manual = os.path.abspath(os.path.expanduser(manual))
         if not os.path.isfile(os.path.join(manual, "SKILL.md")):
@@ -246,24 +257,30 @@ def step_install(c, args, ctx):
             return False
         src = manual
     ctx["source"] = src
-    if os.path.abspath(src) == os.path.abspath(ctx["target"]):
+    # Validate the entire manifest and every destination before any copying.
+    for rel in SKILL_FILES:
+        source_file = os.path.join(src, rel)
+        if not os.path.isfile(source_file) or os.path.islink(source_file):
+            print(c.red("Missing or unsafe skill file: %s" % rel))
+            return False
+        target_file = os.path.join(ctx["target"], rel)
+        current = target_file
+        while current != os.path.dirname(current):
+            if os.path.islink(current):
+                print(c.red("Refusing a symbolic-link install path: %s" % current))
+                return False
+            current = os.path.dirname(current)
+    if os.path.realpath(src) == os.path.realpath(ctx["target"]):
         print("Source and target are the same folder. Nothing to copy, "
               "will verify in place.")
         ctx["copied"] = []
         return True
     copied = []
-    for root, dirs, files in os.walk(src):
-        dirs[:] = [d for d in dirs
-                   if d not in ("__pycache__", ".git", ".svn", ".hg")]
-        for f in files:
-            if f.startswith(".") or f.endswith((".pyc", ".pyo")):
-                continue
-            src_file = os.path.join(root, f)
-            rel = os.path.relpath(src_file, src)
-            dst_file = os.path.join(ctx["target"], rel)
-            os.makedirs(os.path.dirname(dst_file), exist_ok=True)
-            shutil.copy2(src_file, dst_file)
-            copied.append(rel)
+    for rel in SKILL_FILES:
+        dst_file = os.path.join(ctx["target"], rel)
+        os.makedirs(os.path.dirname(dst_file), exist_ok=True)
+        shutil.copy2(os.path.join(src, rel), dst_file)
+        copied.append(rel)
     ctx["copied"] = sorted(copied)
     print(c.green("Copied %d files." % len(copied)))
     return True
@@ -292,7 +309,8 @@ def step_verify(c, args, ctx):
     print(c.bold("Step 4: verify"))
     print("Reading back the install. Trust the thing, not the report. "
           "(h for help)")
-    prompt(c, "Ready", help_key="verify", default="")
+    if not args.yes:
+        prompt(c, "Ready", help_key="verify", default="")
     skill = os.path.join(ctx["target"], "SKILL.md")
     if not os.path.isfile(skill):
         print(c.red("SKILL.md missing at %s" % ctx["target"]))
@@ -303,9 +321,17 @@ def step_verify(c, args, ctx):
         return False
     print(c.green("SKILL.md present, frontmatter parses (name: %s)."
                   % fields.get("name", "?")))
-    for extra in ("templates", "docs"):
-        p = os.path.join(ctx["target"], extra)
-        print("  [%s] %s" % ("ok" if os.path.isdir(p) else "--", extra))
+    for rel in SKILL_FILES:
+        destination = os.path.join(ctx["target"], rel)
+        if not os.path.isfile(destination):
+            print(c.red("Required installed file missing: %s" % rel))
+            return False
+        if ctx.get("source"):
+            with open(os.path.join(ctx["source"], rel), "rb") as source:
+                with open(destination, "rb") as installed:
+                    if source.read() != installed.read():
+                        print(c.red("Installed file differs from source: %s" % rel))
+                        return False
     print(c.green("Install verified."))
     return True
 
@@ -314,8 +340,8 @@ def step_tutorial(c, args, ctx):
     print(c.bold("Step 5: first run"))
     print("A sixty second tour so your first session is not a cold start. "
           "(h for help)")
-    choice = prompt(c, "Show the tour? (y/n)", help_key="tutorial",
-                    default="y")
+    choice = "y" if args.yes else prompt(
+        c, "Show the tour? (y/n)", help_key="tutorial", default="y")
     if choice.lower().startswith("n"):
         print("Skipped. The full tour lives in docs/tutorial.md.")
         return True
@@ -359,7 +385,7 @@ def summary(c, ctx):
 
 def main():
     ap = argparse.ArgumentParser(description="Install the TGL developer harness.")
-    ap.add_argument("--yes", action="store_true", help="skip pauses")
+    ap.add_argument("--yes", action="store_true", help="use defaults without prompts")
     ap.add_argument("--no-color", action="store_true", help="disable ANSI colors")
     ap.add_argument("--target", default=None, help="install location")
     args = ap.parse_args()
@@ -388,20 +414,23 @@ def main():
         print()
         pause(c, args)
 
-        steps = [step_env, step_target, step_install, step_verify,
+        steps = [step_target, step_env, step_install, step_verify,
                  step_tutorial]
         for step in steps:
             if not step(c, args, ctx):
                 print()
-                print(c.red("Installer stopped. Nothing half-installed is "
-                            "left in a weird state: re-run to try again."))
+                print(c.red("Installer stopped. Check the destination before retrying; "
+                            "files already copied may remain."))
                 return 1
         summary(c, ctx)
         return 0
     except KeyboardInterrupt:
         print()
-        print(c.dim("Installer cancelled. Nothing was half-installed."))
+        print(c.dim("Installer cancelled. Check the destination; copied files may remain."))
         return 130
+    except OSError as exc:
+        print(c.red("Install failed: %s. Check the destination before retrying." % exc))
+        return 1
 
 if __name__ == "__main__":
     sys.exit(main())

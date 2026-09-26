@@ -1,104 +1,27 @@
-# TGL Connector Deploy Runbook
+# TGL connector operations
 
-Staged by slice 6. Nothing here has been run: the runtime choice, the
-DNS change, and the deploy itself are Tom's decisions.
+Current app: `tgl-summitx`, Fly.io, region dfw, one process on one 512 MB shared machine. Source in the public tom-nwachuku/tgl repository. The deployment credential is the existing GitHub Actions FLY_API_TOKEN secret; never copy it into logs, packets or the browser.
 
-## What this deploys
+## Release
 
-The TGL connector: a free, no-auth MCP server exposing 6 tools
-(`tgl_plan_start`, `tgl_plan_log`, `tgl_plan_goal`, `tgl_plan_spec`,
-`tgl_plan_plan`, `tgl_install`), plus static pages (`/`, `/privacy`,
-`/terms`) and stored-doc routes (`/docs/<session_id>/spec|plan`).
+1. Save the current image/release ID and machine count. Sessions are ephemeral; **a deploy or rollback discards active planning sessions**. Never describe rollback as having no data impact.
+2. Run the bundle-drift check and regression suite on the exact commit. Check public documentation against API.md.
+3. Build only `connector/` using its Dockerfile. Non-root user; one Uvicorn process; access logs off. Private preparation, evidence and credentials stay outside the image context.
+4. Dispatch the deploy workflow for the reviewed branch, or merge an approved PR to main. The workflow verifies before deploying. Use no HA standby machine: session data is process-local and must not randomly route across machines. Do not scale horizontally without a shared, authenticated state design.
+5. Read the deployment result, then perform SDK initialize/list/all-tool/doc/delete verification at the public URL. A green deployment alone is insufficient. Re-test through Muse's actual custom integration.
 
-Source: `~/workspace/tgl/connector/`. Pinned deps in
-`requirements.txt` (mcp 2.2.0, uvicorn 0.54.0, starlette 1.7.0).
+## Custom domain
 
-## Step 1: Tom picks the runtime (his decision)
+In Cloudflare, create only the scoped `tgl.summitxdigital.com` record(s) supplied by the Fly app's current certificate/DNS instructions, with proxy disabled. Do not guess app IPs from edge DNS. Preserve main-site, developer-site and mail records. Request/verify Fly's TLS certificate for this exact domain. Confirm HTTPS, `/`, `/privacy`, `/terms`, initialize and the full MCP journey. Then set `TGL_PUBLIC_BASE_URL=https://tgl.summitxdigital.com` and update public copy and the unsubmitted review form. The Fly domain remains a valid fallback.
 
-The image is a plain Python container listening on `$PORT` (default
-8000). Any host that runs containers works: a small VPS, Fly.io,
-Railway, Render, or the existing SummitX host. There is no database
-and no state to migrate: sessions live in memory and expire after 24
-hours of inactivity.
+Host/Origin validation must allow the deployed public names. Fly health checks use `/`; verify their actual status. Never globally disable DNS-rebinding protection to fix a hostname mismatch.
 
-## Step 2: build the image
+## Rollback and incidents
 
-From `~/workspace/tgl/connector/`:
+Redeploy the previously recorded image/commit through the existing workflow. Verify its actual public tools and document behavior. Both forward deploy and rollback discard live sessions. A rollback to the original build also restores its known read/write-link and deletion limitations, so consider disabling access until a fixed forward release instead.
 
-```
-docker build -t tgl-connector .
-```
+Session content must not enter logs or support issues. Ask users to delete their session with tgl_plan_delete; privacy support is private email. Investigate security incidents using non-content metadata, limit exposure, preserve necessary evidence privately and notify the responsible owner. The published Muse Connector Terms require notice to Meta within 48 hours for a User Data incident; Tom must review and accept those obligations before store submission. Do not invent a Meta incident API or claim monitoring/SLA coverage that is not configured.
 
-## Step 3: run it
+## Submission boundary
 
-```
-docker run -d --name tgl-connector -e PORT=8000 -p 8000:8000 tgl-connector
-```
-
-## Step 4: DNS (Tom's decision)
-
-Create an A record for `tgl.summitxdigital.com` pointing at the host's
-public IP. DNS is on Cloudflare, so proxy the record (orange cloud) to
-get TLS at `https://tgl.summitxdigital.com` with no extra setup.
-
-## Step 5: verify
-
-Replace the host below with the real one once DNS resolves.
-
-```bash
-BASE=https://tgl.summitxdigital.com
-
-# Static pages
-curl -s -o /dev/null -w "%{http_code}\n" $BASE/
-curl -s -o /dev/null -w "%{http_code}\n" $BASE/privacy
-curl -s -o /dev/null -w "%{http_code}\n" $BASE/terms
-# expect 200, 200, 200
-
-# MCP initialize
-curl -s -X POST $BASE/mcp \
-  -H 'Content-Type: application/json' \
-  -H 'Accept: application/json, text/event-stream' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"verify","version":"1"}}}' \
-  -D - -o /tmp/init.out | grep -i mcp-session-id
-# expect a session id; save it as SID
-
-# list_tools shows all 6 tools
-SID=<session id from above>
-curl -s -X POST $BASE/mcp \
-  -H 'Content-Type: application/json' \
-  -H 'Accept: application/json, text/event-stream' \
-  -H "mcp-session-id: $SID" \
-  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'
-# expect tgl_plan_start, tgl_plan_log, tgl_plan_goal,
-# tgl_plan_spec, tgl_plan_plan, tgl_install
-
-# tgl_install returns the bundle with no session
-curl -s -X POST $BASE/mcp \
-  -H 'Content-Type: application/json' \
-  -H 'Accept: application/json, text/event-stream' \
-  -H "mcp-session-id: $SID" \
-  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"tgl_install","arguments":{}}}' \
-  | grep -o 'SKILL.md'
-# expect SKILL.md in the bundle
-```
-
-Full plan-session smoke (start, log, goal, spec, plan) against
-production: run the same tool calls in order over MCP. A spec needs a
-"what" heading and a "why" heading with 200+ characters and no code
-blocks; a plan needs 2+ numbered slices, each naming files,
-interfaces, tests, commands, expected output, and a Review Focus.
-
-## Rollback
-
-Stop the container (`docker stop tgl-connector`) and remove the DNS
-record. No data is lost: sessions are ephemeral by design.
-
-## After deploy: slice 7 (Tom's approval)
-
-Submit at https://muse.ai/platform with:
-- Endpoint: https://tgl.summitxdigital.com/mcp
-- Icon: `connector/assets/tgl-icon-512.png` (512x512 PNG)
-- Privacy: https://tgl.summitxdigital.com/privacy
-- Terms: https://tgl.summitxdigital.com/terms
-- Docs: https://github.com/tom-nwachuku/tgl
-- Auth: none. Payments: none. Access requirements: none.
+Deployment, custom integration, directory approval and featured placement are different states. Leave all final form attestations and Terms acceptance for Tom. Never call a prepared draft submitted, approved, or listed.

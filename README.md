@@ -45,8 +45,8 @@ a real user would. Red team creed: break it before they do.
 ![Attack Mode: the assault](assets/branding/attack-mode.svg)
 
 **The chain of command between them:** Attack Mode does not march without
-signed orders. No approved plan, no assault. It is the only enforcement
-mechanism, and it is absolute.
+signed orders. No approved plan, no assault. This is a workflow instruction followed by Muse, not a code-enforced
+permission interlock. Muse supplies execution tools and permissions.
 
 | Without TGL | With TGL |
 |---|---|
@@ -73,11 +73,23 @@ stdlib-only Python, so it works over the plainest SSH connection:
 - Offers the guided first run
 
 Every step has a help tooltip: press `h` at any prompt.
-Flags: `--yes` to skip pauses, `--no-color` for plain output,
+Flags: `--yes` to use defaults without any input prompts, `--no-color` for plain output,
 `--target DIR` to choose the install location.
 
 After either path, two phrases run everything: **"TGL, plan X"** and
 **"go attack mode."**
+
+## Hosted connector
+
+The hosted MCP service supports planning and delivers the complete skill bundle.
+It cannot execute builds. [How it works](https://developers.summitxdigital.com/tgl/connector/)
+and [technical documentation](connector/API.md). A custom integration can be
+created by asking Muse to connect to the MCP endpoint. This is separate from
+a Meta-reviewed directory listing; TGL has not been submitted by this release.
+
+Keep your session id private. Document read links are separately shareable.
+Save your work before deleting the session or before its temporary storage expires.
+Use `tgl_plan_delete` when you are finished.
 
 ## Learn it
 

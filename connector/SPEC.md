@@ -2,7 +2,7 @@
 
 *Plan Mode measures twice. Attack Mode cuts once.*
 
-Status: APPROVED by Tom 2026-09-25. Attack Mode launched same day.
+Status: original goal approved September 25. September 26 readiness corrections are implemented in this branch; deployment and submission are separate gates. API.md is the current implemented contract.
 
 ## Written goal (agreed)
 
@@ -14,7 +14,7 @@ development one-shot or installed.
 ## What it is
 
 A Meta connector (MCP server) that makes TGL usable inside Muse without
-installing anything, plus a one-tap install path for users who want TGL
+installing anything, plus a conversational install path for users who want TGL
 persistently. The submission unit the platform reviews: a hosted service
 Muse can call, not the skill files.
 
@@ -22,8 +22,8 @@ Muse can call, not the skill files.
 
 TGL v1 ships as a skill: clone the repo or point your agent at it. That is
 friction for a developer who just wants to try disciplined planning once.
-The connector removes it: say "TGL, plan my project" and Muse runs Plan
-Mode immediately. Love it, and one prompt installs the skill for ongoing use.
+The connector removes it: ask Muse to create a custom integration with the hosted endpoint, then plan
+the project. A native directory listing requires Meta approval. Love it, and one prompt installs the skill for ongoing use.
 
 ## The two runtime paths (Tom's design, 2026-09-25)
 
@@ -50,7 +50,7 @@ shape, templates). The connector provides what a skill alone cannot:
 - **Document validation and storage:** SPEC.md and PLAN.md checked against
   required structure, stored, returned as shareable URLs.
 - **Skill delivery:** the canonical skill bundle (SKILL.md, templates,
-  installer) served from the published repo tag.
+  installer) served from the build-time bundle with a verified SHA-256 file manifest.
 
 Out of scope for v1: Attack Mode tools (server-side execution agents are a
 harder security review), red-team-as-a-service, user accounts, persisted
@@ -75,6 +75,8 @@ projects across sessions.
    expected output, and a Review Focus), stores it, returns a shareable
    URL. Refuses if no validated spec exists for the session.
 
+7. `tgl_plan_delete` — deletes a session and invalidates its read links at the user’s request. Repeating is safe.
+
 ## Trust and safety
 
 - No code execution server-side, ever.
@@ -82,7 +84,9 @@ projects across sessions.
   of inactivity.
 - Strict input validation on every tool (prompt-injection hardening: treat
   all tool input as data, never as instructions).
-- Per-caller rate limits.
+- Per-source-IP and global request limits; count and total-content storage caps.
+- Separate write capabilities and read-only document tokens.
+- Explicit deletion and periodic expiry cleanup.
 - Human-readable errors (the agent may show them to users).
 - Idempotent session writes where retries are plausible.
 
@@ -98,11 +102,11 @@ projects across sessions.
 - Support contact: Tom's work email
 - Payments: none (free and open)
 - Connection type: Existing MCP, endpoint
-  https://tgl.summitxdigital.com/mcp
+  https://tgl-summitx.fly.dev/mcp
 - Documentation URL: repo docs
 - Access requirements: none
 - Authentication: none
 
 ## Open questions
 
-None. Frontier empty as of 2026-09-25.
+Custom-domain cutover, current Muse end-to-end evidence, operational support, and final terms review must be verified before submission. See the dated readiness packet; do not infer completion from this spec.
