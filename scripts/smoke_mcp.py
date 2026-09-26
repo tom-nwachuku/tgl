@@ -13,8 +13,8 @@ import httpx
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
-SPEC = '# What it is\nA dummy local bookmarking app for a single reviewer. It stores a title and a URL on the device, lists the saved links, and lets the reviewer remove one selected link.\n## Why\nThis non-sensitive fixture verifies the TGL planning journey without building an application or publishing information. The goal is a clear plan and a readable document.\n'
-PLAN = '# Reviewer plan\n' + '\n'.join('## Slice %s: %s\nFiles: app.py. Interfaces: local list. Tests: empty, add, delete. Commands: run local tests. Expected output: the local list behaves as specified. Review Focus: no network side effects.\n' % (n,name) for n,name in [(1,'storage'),(2,'interface')])
+SPEC = '# What it is\nAdd keyboard navigation to an existing report screen in an isolated review fixture. A reviewer can move through visible rows with arrow keys and activate the focused row. No network, accounts, or actual user data are involved.\n## Why\nThis disposable feature request verifies the TGL planning transport without implementing or publishing a real product. A readable spec and sliced plan are the expected outputs.\n'
+PLAN = '# Reviewer plan\n' + '\n'.join('## Slice %s: %s\nFiles: report-view.js. Interfaces: focused row index. Tests: empty list, first and last row. Commands: run local tests. Expected output: keyboard navigation follows the spec. Review Focus: no focus loss at list boundaries.\n' % (n,name) for n,name in [(1,'focus state'),(2,'keyboard interaction')])
 
 
 def data(result):
@@ -40,16 +40,16 @@ async def run(endpoint):
             assert all(hashlib.sha256(bundle['files'][p].encode()).hexdigest()==digest for p,digest in manifest['files'].items())
             assert 'docs/tutorial.md' in bundle['files']
             receipt['checks']['complete_bundle_hashes']=True
-            start=data(await client.call_tool('tgl_plan_start',{'project_description':'TGL reviewer fixture: a personal local-only bookmarking app.'}))
+            start=data(await client.call_tool('tgl_plan_start',{'project_description':'Disposable feature fixture: keyboard navigation in an existing report screen.'}))
             sid=start['session_id']
             try:
                 rejected=await client.call_tool('tgl_plan_goal',{'session_id':sid,'goal':'Too early'})
                 assert rejected.is_error
                 receipt['checks']['goal_before_qa_rejected']=True
-                args={'session_id':sid,'question':'Who uses this?','answer':'One person, local storage only.'}
+                args={'session_id':sid,'question':'Which keyboard behavior is in scope?','answer':'Arrow keys move row focus; Enter activates the focused row.'}
                 assert data(await client.call_tool('tgl_plan_log',args))['qa_count']==1
                 assert data(await client.call_tool('tgl_plan_log',args))['qa_count']==1
-                data(await client.call_tool('tgl_plan_goal',{'session_id':sid,'goal':'Save and manage personal reading links locally.'}))
+                data(await client.call_tool('tgl_plan_goal',{'session_id':sid,'goal':'Make the existing report screen usable with a keyboard.'}))
                 spec=data(await client.call_tool('tgl_plan_spec',{'session_id':sid,'spec_markdown':SPEC}))
                 plan=data(await client.call_tool('tgl_plan_plan',{'session_id':sid,'plan_markdown':PLAN}))
                 token=urlsplit(spec['url']).path.split('/')[-2]

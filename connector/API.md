@@ -1,6 +1,8 @@
 # TGL connector 1.1
 
-TGL helps Muse turn a project idea into a goal, SPEC.md, and a sliced PLAN.md. The service stores temporary planning state, checks document structure, and delivers the full skill bundle. It does not draft with a model, execute builds, sign approvals, or access connected accounts.
+TGL is a Muse-native developer harness for disciplined, spec-driven software development. Plan Mode reads project context, works through decisions, and produces SPEC.md and a sliced PLAN.md for human sign-off. Attack Mode uses fresh subagents, slice review, progress reports, red-team verification in the real interface, and a release ledger. [The complete workflow](../SKILL.md) is the product.
+
+This hosted MCP service is its installation and planning companion: it delivers the complete skill bundle, stores temporary planning state, and checks document structure. The installed skill directs the workflow using Muse's own tools and permissions. The server does not draft with a model, execute builds, sign approvals, or access connected accounts.
 
 ## Connection
 

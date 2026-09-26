@@ -27,6 +27,8 @@ primary_region = "dfw"
     method = "get"
     path = "/"
     protocol = "http"
+    [services.http_checks.headers]
+      Host = "tgl-summitx.fly.dev"
 
 [[vm]]
   cpu_kind = "shared"
