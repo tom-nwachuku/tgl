@@ -1,6 +1,6 @@
 ---
 name: "tgl"
-description: "TGL (Touch Grass Later): a Muse-native developer harness with two modes. Plan Mode grills, specs, and plans with human sign-off before any code. Attack Mode executes the signed plan in reviewed slices, red-teams the build, and ships. Trigger on 'TGL, plan X', 'go attack mode', or any request for disciplined plan-then-execute development."
+description: "TGL (Touch Grass Later): a Muse-native developer harness and AI coding agent workflow for disciplined, spec-driven software development. Two modes. Plan Mode grills you one question at a time (tappable choices), then writes SPEC.md and a sliced PLAN.md with human sign-off before any code. Attack Mode executes the plan in reviewed slices with build check-ins, then red-teams the build and ships. Human-in-the-loop, plan-then-execute agentic coding. Trigger on 'TGL, plan X', 'go attack mode', 'run TGL', or 'install TGL'."
 ---
 
 # TGL (Touch Grass Later)
@@ -81,13 +81,24 @@ it survives its own red team. Red team creed: break it before they do.
    after-action entry to LEDGER.md: what shipped and one honest paragraph on
    what was learned.
 4. **Build SITREPs: never build silently.** At the start of Attack Mode, at
-   each slice review, and the moment you are blocked, send the human a 5-line
-   SITREP (situation report):
-   - BUILDING: one line, what you are building right now
-   - BLOCKED: where you are stuck, or "clear"
-   - NEXT: what lands next
-   - ETA: your time estimate, stated plainly
-   - NEED: what you need from the human (only if the human must do something)
+   each slice review, and the moment you are blocked, send the human a
+   SITREP (situation report). Format it for glanceability: bold header,
+   blank line, then one bullet per item with the label bolded, a blank line
+   between bullets (single newlines collapse in chat, so use real spacing):
+
+   **SITREP**
+
+   • **BUILDING:** one line, what you are building right now
+
+   • **BLOCKED:** where you are stuck, or "clear"
+
+   • **NEXT:** what lands next
+
+   • **ETA:** your time estimate, stated plainly
+
+   • **NEED:** what you need from the human (only if the human must do
+     something)
+
    Keep it human and short. A SITREP is a check-in, not a status dump.
 
 ### The ledger
@@ -131,6 +142,9 @@ friction logged here becomes the next version of the harness.
    knows what is happening until it is done, and done-wrong is discovered
    too late. SITREP at the start of Attack Mode, at every slice boundary,
    and the moment you are blocked.
+10. Show, don't tell. When reporting completed work, show the thing:
+   screenshot, recording, or the live surface itself. A build report nobody
+   can see is a rumor. Never claim readiness without showing the evidence.
 
 ## Installation
 

@@ -4,11 +4,14 @@
 
 *Plan Mode measures twice. Attack Mode cuts once.*
 
-TGL is a developer harness for Muse agents. Agents are powerful but
-improvisational: brilliant one turn, sloppy the next. TGL makes disciplined
-development the default: plan carefully with human sign-off, then execute
-relentlessly in small reviewed slices, then let a red team try to break what
-was built. Nothing ships until it survives its own red team.
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Muse native](https://img.shields.io/badge/Muse--native-agent%20harness-red)](SKILL.md)
+[![Version](https://img.shields.io/badge/version-v1-black)](docs/tutorial.md)
+
+TGL is a developer harness for Muse agents: an AI-native, spec-driven way
+to turn an AI coding agent from improviser into a disciplined build team.
+Agents are powerful but improvisational: brilliant one turn, sloppy the next.
+TGL makes disciplined development the default.
 
 ## Quick start
 
@@ -31,15 +34,26 @@ re-asks a settled question), SPEC.md (what and why, no code), PLAN.md
 output, and a Review Focus per slice). Nothing is built until you sign the
 plan.
 
+![Plan Mode: the war room](assets/branding/plan-mode.svg)
+
 **Attack Mode: the assault.** One subagent per slice, each with fresh
 context. The commanding agent reviews each slice against the spec before the
-next begins, and sends you a 5-line SITREP at every boundary so the build
-never goes quiet. Then a fresh agent plays red team and attacks the build
-the way a real user would. Red team creed: break it before they do.
+next begins, and sends you a SITREP at every boundary so the build never
+goes quiet. Then a fresh agent plays red team and attacks the build the way
+a real user would. Red team creed: break it before they do.
+
+![Attack Mode: the assault](assets/branding/attack-mode.svg)
 
 **The chain of command between them:** Attack Mode does not march without
 signed orders. No approved plan, no assault. It is the only enforcement
 mechanism, and it is absolute.
+
+| Without TGL | With TGL |
+|---|---|
+| One-shot builds, silent for an hour | Sliced execution with a SITREP at every boundary |
+| "It works on my machine" | Verified in the real surface at real size |
+| Bugs found by users | Bugs found by your own red team first |
+| Context lost between sessions | LEDGER.md remembers every decision |
 
 ## Installation
 
@@ -51,12 +65,16 @@ by step, explains what each mode does, and runs the first-run tutorial with
 you. No terminal required.
 
 **TUI installer.** Run `python3 install/tgl-install.py` in a terminal. It is
-stdlib-only Python, so it works over the plainest SSH connection. It shows
-you what TGL is and how the two modes work, checks the environment, copies
-the skill into your Muse skills folder, verifies the install by reading it
-back, and offers the guided first run. Every step has a help tooltip: press
-`h` at any prompt. Flags: `--yes` to skip pauses, `--no-color` for plain
-output, `--target DIR` to choose the install location.
+stdlib-only Python, so it works over the plainest SSH connection:
+
+- Shows you what TGL is and how the two modes work
+- Checks the environment, then copies the skill into your Muse skills folder
+- Verifies the install by reading it back (never trust a build report)
+- Offers the guided first run
+
+Every step has a help tooltip: press `h` at any prompt.
+Flags: `--yes` to skip pauses, `--no-color` for plain output,
+`--target DIR` to choose the install location.
 
 After either path, two phrases run everything: **"TGL, plan X"** and
 **"go attack mode."**
@@ -64,7 +82,8 @@ After either path, two phrases run everything: **"TGL, plan X"** and
 ## Learn it
 
 - [docs/tutorial.md](docs/tutorial.md): guided first run on a tiny example
-  project. Shows exactly what you type and see.
+  project. Shows exactly what you type and see, including what a SITREP
+  looks like when a build checks in.
 - [docs/modes.md](docs/modes.md): Plan Mode vs Attack Mode deep dive, the
   chain-of-command gate, and what red-team verification catches.
 

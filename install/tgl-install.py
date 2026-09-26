@@ -212,9 +212,10 @@ def step_install(c, args, ctx):
         return True
     copied = []
     for root, dirs, files in os.walk(src):
-        dirs[:] = [d for d in dirs if d != "__pycache__"]
+        dirs[:] = [d for d in dirs
+                   if d not in ("__pycache__", ".git", ".svn", ".hg")]
         for f in files:
-            if f.endswith((".pyc", ".pyo")):
+            if f.startswith(".") or f.endswith((".pyc", ".pyo")):
                 continue
             src_file = os.path.join(root, f)
             rel = os.path.relpath(src_file, src)
