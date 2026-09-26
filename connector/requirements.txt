@@ -1,0 +1,5 @@
+# Runtime dependencies for the TGL connector MCP server.
+# Pinned to the versions verified in the build environment (2026-09-25).
+mcp==2.2.0
+uvicorn==0.54.0
+starlette==1.7.0
