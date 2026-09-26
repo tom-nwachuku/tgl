@@ -31,15 +31,39 @@ class C:
     def green(self, t): return self.wrap("92", t)
     def yellow(self, t): return self.wrap("93", t)
 
-BANNER = r"""
-  _______  _______  __
- |       ||       ||  |
- |_     _||   _   ||  |
-   |   |  |  | |  ||  |
-   |   |  |  |_|  ||  |___
-   |___|  |_______||_______|
-   TOUCH GRASS LATER
-"""
+def banner(c):
+    """The welcome banner. Green grass, a dog, a red ball. Touch grass."""
+    letters = r"""
+  ███████╗ ██████╗ ██╗
+  ╚══██╔══╝██╔════╝ ██║
+     ██║   ██║  ███╗██║
+     ██║   ██║   ██║██║
+     ██║   ╚██████╔╝███████╗
+     ╚═╝    ╚═════╝ ╚══════╝"""
+    tagline = "        TOUCH GRASS LATER"
+    dog = [
+        "    _       _",
+        "   / \\_____/ \\",
+        "   |  o   o  |",
+        "    \\   w   /",
+        "     \\_____/",
+    ]
+    ball = [" .-.", "(   )", " '-'"]
+    ball_col = 35
+    grass = "\n".join([
+        "  , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , ,",
+        "   \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/",
+    ])
+    lines = [c.green(c.bold(letters)), c.dim(tagline), ""]
+    top = len(dog) - len(ball)
+    for i, dl in enumerate(dog):
+        line = c.yellow(dl)
+        if i >= top:
+            b = ball[i - top]
+            line += " " * (ball_col - len(dl)) + c.red(b)
+        lines.append(line)
+    lines.append(c.green(grass))
+    return "\n".join(lines)
 
 HELP = {
     "welcome": (
@@ -327,7 +351,7 @@ def main():
            "source": None, "copied": []}
 
     try:
-        print(c.red(c.bold(BANNER)))
+        print(banner(c))
         print(c.bold("TGL installer. Touch Grass Later."))
         print()
         print("The developer harness with a joke for a name and a regiment")
