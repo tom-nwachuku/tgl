@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""TGL installer. Touch Grass Later: the developer harness with a joke for
-a name and a regiment for a work ethic.
+"""TGL installer. Touch Grass Later: an AI-native, spec-driven way to turn
+an AI coding agent from improviser into a disciplined build team.
 
 Run it:  python3 install/tgl-install.py
 Flags:   --yes (skip pauses), --no-color, --target DIR (install location)
@@ -32,7 +32,7 @@ class C:
     def yellow(self, t): return self.wrap("93", t)
 
 def banner(c):
-    """The welcome banner. Green grass, a tree with a swing. Touch grass."""
+    """The welcome banner. Green grass, a tree with a swing, a ball on the lawn."""
     letters = r"""
   ███████╗ ██████╗ ██╗
   ╚══██╔══╝██╔════╝ ██║
@@ -47,42 +47,55 @@ def banner(c):
         "              /          \\",
         "             |            |",
         "              \\          /",
-        "               \\________/_______________________",
-        "                    ||                     |  |",
-        "                    ||                     |  |",
-        "                    ||                     |__|",
+        "               \\________/___________",
+        "                    ||          |  |",
+        "                    ||          |  |",
+        "                    ||          |__|",
         "                 ___||___",
     ]
-    swing_top = 6  # tree lines the swing hangs from
-    swing_col = 43
+    ball = [" .-.", "(   )", " '-'"]
+    swing_col = 30  # the swing hangs here, close to the trunk
+    ball_col = 55   # the ball sits out on the lawn
     grass = "\n".join([
         "  , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , ,",
         "   \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/",
     ])
     lines = [c.green(c.bold(letters)), c.dim(tagline), ""]
+    plain = []
     for i, tl in enumerate(tree):
-        if swing_top <= i < swing_top + 3:
-            # swing hangs here: tree stays green, swing goes yellow
-            lines.append(c.green(tl[:swing_col]) + c.yellow(tl[swing_col:]))
+        if 7 <= i <= 9:
+            tl = tl + " " * (ball_col - len(tl)) + ball[i - 7]
+        plain.append(tl)
+    for i, line in enumerate(plain):
+        if 6 <= i <= 8:
+            lines.append(c.green(line[:swing_col])
+                         + c.yellow(line[swing_col:swing_col + 4])
+                         + c.green(line[swing_col + 4:ball_col])
+                         + c.red(line[ball_col:]))
+        elif i == 9:
+            lines.append(c.green(line[:ball_col]) + c.red(line[ball_col:]))
         else:
-            lines.append(c.green(tl))
+            lines.append(c.green(line))
     lines.append(c.green(grass))
     return "\n".join(lines)
 
 HELP = {
     "welcome": (
-        "TGL is a developer harness for Muse agents. It splits every build "
-        "into two modes with a hard gate between them.\n\n"
-        "Plan Mode is the war room. Your agent grills you one question at a "
-        "time, writes a spec and a sliced plan, and waits for your sign-off. "
-        "No code happens here. Measure twice.\n\n"
-        "Attack Mode is the assault. You say 'go attack mode' and your agent "
-        "executes the signed plan one slice at a time, reviewing each slice "
-        "before moving on. Then a red team tries to break what got built. "
-        "Cut once.\n\n"
-        "The name is the joke devs put on a sticker. The discipline is the "
-        "serious part. This installer puts the harness where your Muse agent "
-        "can find it."
+        "TGL is a developer harness for Muse agents: an AI-native, "
+        "spec-driven way to turn an AI coding agent from improviser into "
+        "a disciplined build team.\n\n"
+        "Agents are powerful but improvisational: brilliant one turn, "
+        "sloppy the next. TGL makes disciplined development the default. "
+        "Two modes, one hard gate between them.\n\n"
+        "Plan Mode measures twice. Your agent grills you one question at "
+        "a time, writes a spec and a sliced plan, and waits for your "
+        "sign-off. No code happens here.\n\n"
+        "Attack Mode cuts once. You say 'go attack mode' and your agent "
+        "executes the signed plan one slice at a time, reviewing each "
+        "slice before moving on. Then a red team tries to break what got "
+        "built.\n\n"
+        "The name is the joke. The discipline is the serious part. This "
+        "installer puts the harness where your Muse agent can find it."
     ),
     "env": (
         "The environment check makes sure this machine can actually run the "
@@ -358,12 +371,17 @@ def main():
         print(banner(c))
         print(c.bold("TGL installer. Touch Grass Later."))
         print()
-        print("The developer harness with a joke for a name and a regiment")
-        print("for a work ethic. Two modes, one hard gate between them:")
+        print("TGL is a developer harness for Muse agents: an AI-native,")
+        print("spec-driven way to turn an AI coding agent from improviser")
+        print("into a disciplined build team.")
         print()
-        print("  %s  the war room. Spec and plan, no code until you sign."
+        print("Agents are powerful but improvisational: brilliant one turn,")
+        print("sloppy the next. TGL makes disciplined development the")
+        print("default. Two modes, one hard gate between them:")
+        print()
+        print("  %s  measures twice. Spec and plan, no code until you sign."
               % c.bold("Plan Mode,"))
-        print("  %s  the assault. Say 'go attack mode' and the regiment moves."
+        print("  %s  cuts once. Say 'go attack mode' and the regiment moves."
               % c.red(c.bold("Attack Mode,")))
         print()
         print(c.dim("Press h at any prompt for help. Ctrl+C quits cleanly."))
