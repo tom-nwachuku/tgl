@@ -32,7 +32,7 @@ class C:
     def yellow(self, t): return self.wrap("93", t)
 
 def banner(c):
-    """The welcome banner. Green grass, a dog, a red ball. Touch grass."""
+    """The welcome banner. Green grass, a tree with a swing. Touch grass."""
     letters = r"""
   ███████╗ ██████╗ ██╗
   ╚══██╔══╝██╔════╝ ██║
@@ -41,27 +41,31 @@ def banner(c):
      ██║   ╚██████╔╝███████╗
      ╚═╝    ╚═════╝ ╚══════╝"""
     tagline = "        TOUCH GRASS LATER"
-    dog = [
-        "    _       _",
-        "   / \\_____/ \\",
-        "   |  o   o  |",
-        "    \\   w   /",
-        "     \\_____/",
+    tree = [
+        "                  ____",
+        "               __/    \\__",
+        "              /          \\",
+        "             |            |",
+        "              \\          /",
+        "               \\________/_______________________",
+        "                    ||                     |  |",
+        "                    ||                     |  |",
+        "                    ||                     |__|",
+        "                 ___||___",
     ]
-    ball = [" .-.", "(   )", " '-'"]
-    ball_col = 35
+    swing_top = 6  # tree lines the swing hangs from
+    swing_col = 43
     grass = "\n".join([
         "  , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , ,",
         "   \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/ \\/",
     ])
     lines = [c.green(c.bold(letters)), c.dim(tagline), ""]
-    top = len(dog) - len(ball)
-    for i, dl in enumerate(dog):
-        line = c.yellow(dl)
-        if i >= top:
-            b = ball[i - top]
-            line += " " * (ball_col - len(dl)) + c.red(b)
-        lines.append(line)
+    for i, tl in enumerate(tree):
+        if swing_top <= i < swing_top + 3:
+            # swing hangs here: tree stays green, swing goes yellow
+            lines.append(c.green(tl[:swing_col]) + c.yellow(tl[swing_col:]))
+        else:
+            lines.append(c.green(tl))
     lines.append(c.green(grass))
     return "\n".join(lines)
 
