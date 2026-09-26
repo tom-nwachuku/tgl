@@ -1,0 +1,15 @@
+{
+  "files": {
+    "LICENSE": "6d210fa4c586e9fef733ad29b06f36f6f854431b5e88ee28f3a33efbac26e684",
+    "README.md": "d80ca3f9aa6301afce0f75838b54d4b6fa5877a1a72d02bae2fc1305e71d127d",
+    "SKILL.md": "d7eb3175d082a0d9ddd2ba6f27188c3ee4ab6414909a001fb0c09e30f4b897a2",
+    "docs/modes.md": "0e8b1ce2347dbecba9798e5cda049b4157be64b36d458d686299b5484ca0a519",
+    "docs/tutorial.md": "59f890f70e38b4d04024eede79727a95a5b48a0ca41df7f69bacdfb826a194d3",
+    "install/tgl-install.py": "4ef9e2b995e3861d47feb8621fefa4b84e269e8bb8e1f89d901291bcc08b2d92",
+    "templates/LEDGER-template.md": "294ffc75218ba5a38e252c005a30e846c80c1d37df85c9160014ce605e1ce96b",
+    "templates/PLAN-template.md": "3906211cf34f9210add3369168975317111681ede86218f64a171ed1fa2b2b2a",
+    "templates/SPEC-template.md": "0162a709f8c3014dc4a18cb40dd06d531d0b7978e87404b0d400df60cd885653",
+    "templates/release-checklist.md": "a953af9ad20ceeee38ae4c35ea9142251a5b3b67cb0d087ec9aa8c9e88a4cd3b"
+  },
+  "version": "1.1.0"
+}

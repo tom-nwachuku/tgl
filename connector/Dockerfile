@@ -20,4 +20,4 @@ USER appuser
 
 # $PORT is set by the host platform; default 8000 for local runs.
 # --factory because create_app() is an app factory, not an app instance.
-CMD ["sh", "-c", "uvicorn --factory connector.server:create_app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "uvicorn --factory connector.server:create_app --host 0.0.0.0 --port ${PORT:-8000} --no-access-log"]

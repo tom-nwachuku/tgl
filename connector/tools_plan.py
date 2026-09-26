@@ -6,6 +6,8 @@ human-readable messages: the calling agent may show them to users, so
 each one says what to do instead of just saying no.
 """
 
+import os
+
 from mcp.server.mcpserver.exceptions import ToolError
 
 from connector import security, sessions, validate
@@ -32,11 +34,13 @@ RECON_CHECKLIST = [
 
 
 def _unknown_session_error(session_id):
-    return (
-        "No active plan session found for id '%s'. It may have expired "
-        "(sessions last 24 hours of inactivity). Start a new session with "
-        "tgl_plan_start, then continue the grill there." % session_id
-    )
+    return ("No active plan session found. It may have expired or been deleted. "
+            "Start a new session with tgl_plan_start. Keep its private session id; "
+            "a document read token cannot modify a session.")
+
+
+def _check_id(session_id):
+    security.check_text(session_id, "session_id", 128)
 
 
 def plan_start(project_description):
@@ -45,11 +49,13 @@ def plan_start(project_description):
         project_description, "project_description", security.MAX_TEXT_CHARS
     )
     session_id = sessions.create(project_description)
-    return {"session_id": session_id, "recon_checklist": list(RECON_CHECKLIST)}
+    return {"session_id": session_id, "recon_checklist": list(RECON_CHECKLIST),
+            "notice": "Keep session_id private: it permits edits and deletion. Document links are separately shareable, read-only bearer links. Save files locally; sessions expire after 24 hours without a successful write and may end earlier on restart or capacity eviction. Use tgl_plan_delete when finished."}
 
 
 def plan_log(session_id, question, answer):
     """Append one grill Q&A exchange to the session."""
+    _check_id(session_id)
     security.check_text(question, "question", security.MAX_TEXT_CHARS)
     security.check_text(answer, "answer", security.MAX_TEXT_CHARS)
     result = sessions.log_qa(session_id, question, answer)
@@ -61,6 +67,7 @@ def plan_log(session_id, question, answer):
 
 def plan_goal(session_id, goal):
     """Record the agreed written goal, closing Discuss. Refuses if the grill was skipped."""
+    _check_id(session_id)
     security.check_text(goal, "goal", security.MAX_TEXT_CHARS)
     outcome = sessions.set_goal(session_id, goal)
     if outcome == "unknown":
@@ -81,14 +88,14 @@ def plan_goal(session_id, goal):
 
 
 def _doc_url(session_id, kind):
-    # Served by the GET /docs routes on the connector host, e.g.
-    # https://tgl.summitxdigital.com/docs/<session_id>/spec
-    return "/docs/%s/%s" % (session_id, kind)
+    base = os.environ.get("TGL_PUBLIC_BASE_URL", "https://tgl-summitx.fly.dev").rstrip("/")
+    return "%s/docs/%s/%s" % (base, sessions.get(session_id)["read_token"], kind)
 
 
 def plan_spec(session_id, spec_markdown):
     """Validate and store the SPEC.md. Refuses unless Discuss is closed
     (phase GOAL_SET): no spec before the grill is done and the goal recorded."""
+    _check_id(session_id)
     security.check_text(spec_markdown, "spec_markdown", security.MAX_DOC_CHARS)
     session = sessions.get(session_id)
     if session is None:
@@ -114,6 +121,7 @@ def plan_spec(session_id, spec_markdown):
 def plan_plan(session_id, plan_markdown):
     """Validate and store the PLAN.md. Refuses unless a validated spec
     already exists for the session: plan follows spec, never precedes it."""
+    _check_id(session_id)
     security.check_text(plan_markdown, "plan_markdown", security.MAX_DOC_CHARS)
     session = sessions.get(session_id)
     if session is None:
@@ -121,7 +129,7 @@ def plan_plan(session_id, plan_markdown):
     if not session.get("spec"):
         raise ToolError(
             "Cannot accept the plan yet: no validated spec exists for this "
-            "session. TGL plans from a signed spec, so draft SPEC.md first, "
+            "session. TGL plans from a structurally validated spec, so draft SPEC.md first, "
             "submit it with tgl_plan_spec, and then resubmit the plan with "
             "tgl_plan_plan."
         )
@@ -133,3 +141,10 @@ def plan_plan(session_id, plan_markdown):
         )
     sessions.store_doc(session_id, "plan", plan_markdown)
     return {"ok": True, "url": _doc_url(session_id, "plan")}
+
+
+def plan_delete(session_id):
+    """User-requested deletion; an absent session is already inaccessible."""
+    _check_id(session_id)
+    sessions.delete(session_id)
+    return {"ok": True, "note": "The session and its hosted documents are inaccessible. Copies already saved or retained by Muse are separate."}

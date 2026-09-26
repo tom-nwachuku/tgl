@@ -1,158 +1,148 @@
-"""Plan session store for the TGL connector (slices 1 and 5).
+"""Ephemeral, bounded planning state. Async tool wrappers serialize operations.
 
-In-memory only. No user data persists beyond the session: every session
-expires after 24 hours of inactivity, and expired sessions read as
-missing. The store holds the Q&A history so a plan session survives
-across turns and agents. The store is capped at MAX_SESSIONS: past the
-cap, creation evicts the oldest idle sessions first, so memory stays
-bounded. All operations are synchronous with no awaits between
-check-and-act, so the store is safe on uvicorn's single event loop.
+The write capability is never present in document URLs. Read tokens cannot
+be used as session ids. All state disappears on restart; run one process.
 """
-
+import secrets
 import time
-import uuid
+from mcp.server.mcpserver.exceptions import ToolError
 
 SESSION_TTL_SECONDS = 24 * 60 * 60
-
-# Cap on concurrent sessions. Past this, creation evicts the oldest idle
-# sessions first. Importable here (not only in security.py) so the store
-# enforces its own bound and tests can monkeypatch it.
-MAX_SESSIONS = 10_000
-
+MAX_SESSIONS = 1_000
+MAX_QA = 200
+MAX_SESSION_CHARS = 1_000_000
+MAX_TOTAL_CHARS = 16_000_000
 _now = time.monotonic
-
 _store = {}
+_readers = {}
 
 
-def _expired(session, now):
-    return now - session["last_active_at"] > SESSION_TTL_SECONDS
+def _size(session):
+    return sum(len(session.get(k) or '') for k in ('project_description', 'goal', 'spec', 'plan')) + sum(len(q['question']) + len(q['answer']) for q in session['qa'])
 
 
-def _purge_expired(now):
-    for session_id in [sid for sid, s in _store.items() if _expired(s, now)]:
-        del _store[session_id]
+def delete(session_id):
+    session = _store.pop(session_id, None)
+    if session:
+        _readers.pop(session['read_token'], None)
+    return session is not None
 
 
-def _enforce_cap():
-    """Evict the oldest idle sessions past MAX_SESSIONS.
+def purge_expired():
+    now = _now()
+    for sid, session in list(_store.items()):
+        if now - session['last_active_at'] >= SESSION_TTL_SECONDS:
+            delete(sid)
 
-    Keeps the in-memory store bounded no matter how fast sessions are
-    created. Eviction is by last activity, so the sessions a user is
-    actively grilling in are the last to go.
-    """
-    overflow = len(_store) - MAX_SESSIONS + 1
-    if overflow <= 0:
-        return
-    oldest_first = sorted(_store.items(), key=lambda kv: kv[1]["last_active_at"])
-    for session_id, _session in oldest_first[:overflow]:
-        del _store[session_id]
+
+def _check_capacity(session, delta):
+    purge_expired()
+    if _size(session) + delta > MAX_SESSION_CHARS:
+        raise ToolError('This session has reached its storage limit. Save your documents and start a new session.')
+    if sum(_size(s) for s in _store.values()) + delta > MAX_TOTAL_CHARS:
+        raise ToolError('The service is at its storage limit. Save your work and retry later or use the installed skill locally.')
 
 
 def create(project_description):
-    """Create a plan session. Returns the new session_id (a UUID).
-
-    Expired sessions are purged first; past MAX_SESSIONS the oldest idle
-    sessions are evicted, so the store never grows without bound.
-    """
-    now = _now()
-    _purge_expired(now)
-    _enforce_cap()
-    session_id = uuid.uuid4().hex
-    _store[session_id] = {
-        "session_id": session_id,
-        "project_description": project_description,
-        "created_at": now,
-        "last_active_at": now,
-        "phase": "OPEN",
-        "goal": None,
-        "qa": [],
-        "spec": None,
-        "spec_stored_at": None,
-        "plan": None,
-        "plan_stored_at": None,
+    purge_expired()
+    while len(_store) >= MAX_SESSIONS:
+        delete(min(_store, key=lambda sid: _store[sid]['last_active_at']))
+    session = {
+        'session_id': secrets.token_urlsafe(32),
+        'read_token': secrets.token_urlsafe(32),
+        'project_description': project_description,
+        'created_at': _now(), 'last_active_at': _now(),
+        'phase': 'OPEN', 'goal': None, 'qa': [], 'spec': None,
+        'spec_stored_at': None, 'plan': None, 'plan_stored_at': None,
     }
-    return session_id
+    _check_capacity(session, 0)
+    # The new session is not yet in _store.
+    if sum(_size(s) for s in _store.values()) + _size(session) > MAX_TOTAL_CHARS:
+        raise ToolError('The service is at its storage limit. Retry later or use the installed skill locally.')
+    sid = session['session_id']
+    _store[sid] = session
+    _readers[session['read_token']] = sid
+    return sid
 
 
 def get(session_id):
-    """Return the session dict, or None if unknown or expired."""
-    now = _now()
     session = _store.get(session_id)
-    if session is None:
-        return None
-    if _expired(session, now):
-        del _store[session_id]
+    if session and _now() - session['last_active_at'] >= SESSION_TTL_SECONDS:
+        delete(session_id)
         return None
     return session
 
 
-def touch(session_id):
-    """Mark a session as active (resets the inactivity clock).
+def get_document(read_token, kind):
+    session = get(_readers.get(read_token))
+    return session.get(kind) if session else None
 
-    Returns True if the session exists and is not expired, else False.
-    """
+
+def touch(session_id):
     session = get(session_id)
-    if session is None:
+    if not session:
         return False
-    session["last_active_at"] = _now()
+    session['last_active_at'] = _now()
     return True
 
 
 def clear():
-    """Empty the store. Used by tests."""
     _store.clear()
+    _readers.clear()
+
+
+def _invalidate(session, *kinds):
+    for kind in kinds:
+        session[kind] = None
+        session[kind + '_stored_at'] = None
 
 
 def log_qa(session_id, question, answer):
-    """Append one grill Q&A exchange to the session.
-
-    Returns (qa_count, phase), or None if the session is unknown/expired.
-    The first logged exchange moves the session from OPEN to DISCUSSING.
-    """
     session = get(session_id)
-    if session is None:
+    if not session:
         return None
-    session["qa"].append({"question": question, "answer": answer})
-    if session["phase"] == "OPEN":
-        session["phase"] = "DISCUSSING"
-    session["last_active_at"] = _now()
-    return len(session["qa"]), session["phase"]
+    item = {'question': question, 'answer': answer}
+    # An immediate transport retry must not duplicate the last exchange.
+    if session['qa'] and session['qa'][-1] == item:
+        touch(session_id)
+        return len(session['qa']), session['phase']
+    if len(session['qa']) >= MAX_QA:
+        raise ToolError('This session has 200 question-and-answer exchanges. Save your work and start a new session.')
+    _check_capacity(session, len(question) + len(answer))
+    session['qa'].append(item)
+    session['goal'] = None
+    _invalidate(session, 'spec', 'plan')
+    session['phase'] = 'DISCUSSING'
+    touch(session_id)
+    return len(session['qa']), session['phase']
 
 
 def set_goal(session_id, goal):
-    """Record the agreed written goal on the session.
-
-    Returns one of "ok", "overwritten", "no_qa", "unknown":
-    - "ok": goal recorded, Discuss is now closed (phase GOAL_SET)
-    - "overwritten": a goal already existed; it was replaced, never duplicated
-    - "no_qa": refused, zero Q&A exchanges logged (the grill gate)
-    - "unknown": refused, session unknown or expired
-    """
     session = get(session_id)
-    if session is None:
-        return "unknown"
-    if not session["qa"]:
-        return "no_qa"
-    overwritten = session["goal"] is not None
-    session["goal"] = goal
-    session["phase"] = "GOAL_SET"
-    session["last_active_at"] = _now()
-    return "overwritten" if overwritten else "ok"
+    if not session:
+        return 'unknown'
+    if not session['qa']:
+        return 'no_qa'
+    overwritten = session['goal'] is not None
+    _check_capacity(session, len(goal) - len(session['goal'] or ''))
+    if session['goal'] != goal:
+        _invalidate(session, 'spec', 'plan')
+    session['goal'] = goal
+    session['phase'] = 'GOAL_SET'
+    touch(session_id)
+    return 'overwritten' if overwritten else 'ok'
 
 
 def store_doc(session_id, kind, markdown):
-    """Store a validated doc ("spec" or "plan") on the session.
-
-    Records a wall-clock stored_at timestamp and refreshes the inactivity
-    clock. Resubmission overwrites the previous doc. Returns True on
-    success, False if the session is unknown or expired.
-    """
-    if kind not in ("spec", "plan"):
-        raise ValueError("kind must be 'spec' or 'plan'")
+    if kind not in ('spec', 'plan'):
+        raise ValueError('kind must be spec or plan')
     session = get(session_id)
-    if session is None:
+    if not session:
         return False
+    _check_capacity(session, len(markdown) - len(session[kind] or ''))
+    if kind == 'spec' and session['spec'] != markdown:
+        _invalidate(session, 'plan')
     session[kind] = markdown
-    session[kind + "_stored_at"] = time.time()
-    session["last_active_at"] = _now()
+    session[kind + '_stored_at'] = time.time()
+    touch(session_id)
     return True

@@ -1,64 +1,34 @@
-"""Slice 4 tool implementation: the tgl_install skill bundle.
-
-The bundle is baked into the connector at build time: connector/
-skill-bundle/ holds a copy of the canonical skill tree (SKILL.md,
-templates, installer script, README) plus a VERSION file. This module
-reads that baked copy, so what the tool serves is exactly what was
-reviewed at build time.
-
-Drift protection: tests/test_install.py compares every bundle file byte
-for byte against the live skill tree at ~/workspace/skills/tgl/. If the
-skill evolves, re-copy the tree into skill-bundle/ and refresh VERSION.
-"""
-
-import os
-
+"""Return the complete, build-time skill bundle after verifying its hashes."""
+import hashlib
+import json
+from pathlib import Path
 from mcp.server.mcpserver.exceptions import ToolError
 
-BUNDLE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "skill-bundle")
-
-BUNDLE_FILES = [
-    "SKILL.md",
-    "README.md",
-    "VERSION",
-    "install/tgl-install.py",
-    "templates/SPEC-template.md",
-    "templates/PLAN-template.md",
-    "templates/LEDGER-template.md",
-    "templates/release-checklist.md",
-]
-
+BUNDLE_DIR = Path(__file__).resolve().parent / 'skill-bundle'
 INSTRUCTIONS = (
-    "Two ways to install TGL. Conversational: save these files where your "
-    "Muse agent can read them, point the agent at them, and say "
-    '"install TGL". The agent walks you through setup and the first-run '
-    "tutorial. TUI: save the files, then run "
-    "python3 install/tgl-install.py and follow the prompts "
-    "(press h on any step for help)."
+    'These are skill files, not a completed installation. Save them to an isolated '
+    'folder that Muse can read. Read SKILL.md and docs/tutorial.md, then follow '
+    'the user-authorized installation. For a terminal install, run '
+    'python3 install/tgl-install.py --yes --target YOUR_SKILL_FOLDER. '
+    'Read back the installed SKILL.md before claiming success. The installed skill '
+    'guides planning and reviewed builds; this hosted service cannot execute code. '
+    'Human approval is a workflow instruction, not a server-enforced permission gate.'
 )
 
 
-def _read_bundle():
-    files = {}
-    for path in BUNDLE_FILES:
-        with open(os.path.join(BUNDLE_DIR, path), encoding="utf-8") as fh:
-            files[path] = fh.read()
-    return files
-
-
 def install():
-    """Return the TGL skill bundle and install instructions.
-
-    Takes no session: installing is the no-commitment path and works
-    before any plan session exists. A missing bundle is a server-side
-    problem, so it surfaces as a clean ToolError, never a raw traceback.
-    """
     try:
-        files = _read_bundle()
-    except OSError as exc:
-        raise ToolError(
-            "The TGL install bundle is unavailable on this server. Try "
-            "again in a minute; if it persists, the server needs its "
-            "bundle restored (details: %s)." % exc
-        )
-    return {"files": files, "instructions": INSTRUCTIONS}
+        manifest = json.loads((BUNDLE_DIR/'MANIFEST.json').read_text())
+        files = {}
+        for name, digest in manifest['files'].items():
+            if name.startswith('/') or '..' in Path(name).parts:
+                raise ValueError('unsafe manifest path')
+            data = (BUNDLE_DIR/name).read_bytes()
+            if hashlib.sha256(data).hexdigest() != digest:
+                raise ValueError('bundle integrity mismatch')
+            files[name] = data.decode('utf-8')
+        files['VERSION'] = (BUNDLE_DIR/'VERSION').read_text()
+        files['MANIFEST.json'] = (BUNDLE_DIR/'MANIFEST.json').read_text()
+    except (OSError, ValueError, KeyError, TypeError):
+        raise ToolError('The install bundle is unavailable or failed its integrity check. Retry later or use the canonical GitHub repository.') from None
+    return {'files':files,'instructions':INSTRUCTIONS,'version':manifest['version']}
